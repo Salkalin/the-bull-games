@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Бык — Игровая зона</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+<style>
+:root{--bg:#111;--ink:#f4efe9;--mute:#8a817a;--acc:#ff3b2f;--line:#2a2522}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:Inter,sans-serif;
+  background-image:repeating-linear-gradient(90deg,#141210 0 18px,#0d0c0b 18px 22px);
+  display:flex;flex-direction:column;align-items:center;padding:40px 20px calc(env(safe-area-inset-bottom) + 40px)}
+header{text-align:center;margin-bottom:36px}
+.brand{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--acc);margin-bottom:10px;font-weight:600}
+h1{font-family:Unbounded;font-weight:900;font-size:clamp(32px,9vw,52px);letter-spacing:-.02em;line-height:1}
+h1 span{color:var(--acc)}
+.sub{color:var(--mute);font-size:14px;margin-top:14px;line-height:1.5;max-width:320px}
+.grid{display:flex;flex-direction:column;gap:14px;width:100%;max-width:440px}
+.card{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:16px;background:#1a1716;
+  border:1px solid var(--line);color:inherit;text-decoration:none;transition:transform .15s,border-color .2s,background .2s}
+.card:hover{border-color:var(--acc);background:#221c1a}
+.card:active{transform:scale(.98)}
+.card .ico{font-size:28px;width:52px;height:52px;display:grid;place-items:center;border-radius:12px;background:#221c1a;flex-shrink:0}
+.card h2{font-family:Unbounded;font-weight:700;font-size:17px;margin-bottom:4px}
+.card p{color:var(--mute);font-size:13px;line-height:1.4}
+.card .go{margin-left:auto;color:var(--acc);font-size:16px}
+footer{margin-top:32px;color:var(--mute);font-size:11px;letter-spacing:.15em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">The Бык представляет</div>
+  <h1>Игровая <span>зона</span></h1>
+  <p class="sub">Три игры — пока ждёшь заказ. 3 минуты, промокод и звание.</p>
+</header>
+
+<div class="grid">
+  <a class="card" href="games/meat-match.html">
+    <div class="ico">🍖</div>
+    <div><h2>Мясной Матч</h2><p>Match-3 с эволюцией продуктов. Собери Золотого Быка</p></div>
+    <i class="fa-solid fa-chevron-right go"></i>
+  </a>
+  <a class="card" href="games/bull-mash.html">
+    <div class="ico">🐂</div>
+    <div><h2>Бычий Замес</h2><p>3D-раннер: собирай мясо, уворачивайся от ножей Шефа</p></div>
+    <i class="fa-solid fa-chevron-right go"></i>
+  </a>
+  <a class="card" href="games/meat-synth.html">
+    <div class="ico">🍔</div>
+    <div><h2>Мясной Синтез</h2><p>Сливай куски мяса, дойди до Золотого Быка</p></div>
+    <i class="fa-solid fa-chevron-right go"></i>
+  </a>
+</div>
+
+<footer>The Бык · v1.0</footer>
+</body>
+</html>
