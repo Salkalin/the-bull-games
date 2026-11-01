@@ -1,1 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- PROTECTED: meta type -->
+    <meta name="type" value="app" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мясной Синтез — The Bull Merge</title>
+    <meta property="og:title" content="Мясной Синтез — The Bull Merge">
+    <meta property="og:description" content="Сливай куски мяса, собери Золотого Быка за 3 минуты и получи промокод на скидку.">
+    <meta property="og:type" content="website">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#111;--ink:#f4efe9;--mute:#8a817a;--acc:#ff3b2f;--gold:#f2c14e;--line:#2a2522;}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;}
+        html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,sans-serif;touch-action:none;overscroll-behavior:none;}
+        #canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+        .hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 14px) 18px 0;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:2;}
+        .hud.on{display:flex;}
+        .stat{display:flex;flex-direction:column;gap:2px;}
+        .stat small{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:600;}
+        .stat b{font-family:Unbounded;font-weight:900;font-size:24px;color:var(--ink);line-height:1;}
+        .stat.mid{align-items:center;}
+        .stat.right{align-items:flex-end;}
+        .next{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;font-size:22px;background:#1a1716;}
+        #timer.low{color:var(--acc);}
+        .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 24px) 28px calc(env(safe-area-inset-bottom) + 24px);background:rgba(17,17,17,.94);z-index:5;text-align:center;overflow:auto;}
+        .screen.on{display:flex;animation:fade .35s ease;}
+        @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+        .tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);font-weight:600;margin-bottom:14px;}
+        h1{font-family:Unbounded;font-weight:900;font-size:clamp(38px,11vw,64px);line-height:.95;margin:0 0 18px;color:var(--ink);letter-spacing:-.02em;}
+        h1 span{color:var(--acc);}
+        h2{font-family:Unbounded;font-weight:900;font-size:clamp(28px,8vw,44px);margin:0 0 6px;color:var(--ink);line-height:1.05;}
+        p{color:#b8afa7;line-height:1.55;max-width:340px;margin:0 0 22px;font-size:15px;}
+        .evo{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 26px;font-size:24px;}
+        .evo i{color:var(--mute);font-size:10px;align-self:center;}
+        .rules{list-style:none;padding:0;margin:0 0 28px;text-align:left;max-width:320px;display:flex;flex-direction:column;gap:10px;}
+        .rules li{display:flex;gap:12px;font-size:14px;color:#cfc6be;line-height:1.45;}
+        .rules li i{color:var(--acc);width:16px;margin-top:3px;}
+        .btn{font-family:Unbounded;font-weight:700;font-size:15px;border:0;border-radius:14px;padding:17px 30px;background:var(--acc);color:#fff;cursor:pointer;transition:transform .2s,background .2s;display:inline-flex;gap:10px;align-items:center;justify-content:center;min-width:240px;}
+        .btn:active{transform:scale(.97);}
+        .btn.ghost{background:transparent;color:var(--ink);border:1px solid #3a332f;margin-top:10px;}
+        .btn i{color:inherit;}
+        .score-big{font-family:Unbounded;font-weight:900;font-size:64px;color:var(--gold);line-height:1;margin:6px 0 4px;}
+        .reason{font-size:12px;color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px;}
+        .qr{background:#fff;padding:12px;border-radius:14px;display:inline-block;margin-bottom:12px;}
+        .qr img,.qr canvas{display:block;}
+        .code{font-family:Unbounded;font-weight:700;font-size:16px;color:var(--ink);letter-spacing:.06em;margin-bottom:22px;}
+        .warn{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 74px);font-family:Unbounded;font-weight:900;font-size:13px;letter-spacing:.12em;color:var(--acc);display:none;z-index:3;pointer-events:none;}
+        .warn.on{display:block;animation:blink .5s infinite alternate;}
+        @keyframes blink{to{opacity:.3}}
+        .toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 24px);left:50%;transform:translateX(-50%);background:#221e1c;color:var(--ink);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:opacity .3s;z-index:9;pointer-events:none;}
+        .toast.on{opacity:1;}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="hud" id="hud">
+        <div class="stat"><small>Очки</small><b id="score">0</b></div>
+        <div class="stat mid"><small>Время</small><b id="timer">3:00</b></div>
+        <div class="stat right"><small>Далее</small><div class="next" id="next">🥓</div></div>
+    </div>
+    <div class="warn" id="warn"><i class="fa-solid fa-triangle-exclamation"></i> ПЕРЕПОЛНЕНИЕ</div>
+
+    <div class="screen on" id="startScreen">
+        <div class="tag">The Бык представляет</div>
+        <h1>Мясной<br><span>Синтез</span></h1>
+        <div class="evo">🥓<i class="fa-solid fa-chevron-right"></i>🍗<i class="fa-solid fa-chevron-right"></i>🍔<i class="fa-solid fa-chevron-right"></i>🥩<i class="fa-solid fa-chevron-right"></i>🍖<i class="fa-solid fa-chevron-right"></i>🐂</div>
+        <ul class="rules">
+            <li><i class="fa-solid fa-hand-pointer"></i>Веди пальцем, отпусти — мясо падает</li>
+            <li><i class="fa-solid fa-code-merge"></i>Два одинаковых куска сливаются в больший</li>
+            <li><i class="fa-solid fa-hand"></i>Тапни по руке Шефа, пока она не скинула мусор</li>
+            <li><i class="fa-solid fa-stopwatch"></i>3 минуты. Не переполни контейнер</li>
+        </ul>
+        <button class="btn" id="startBtn"><i class="fa-solid fa-fire-flame-curved"></i>Начать</button>
+    </div>
+
+    <div class="screen" id="cooldownScreen">
+        <div class="tag">Промокод уже получен</div>
+        <h2>Приходи завтра</h2>
+        <p id="cdText">Новый промокод будет доступен через 24 часа.</p>
+        <div class="qr" id="cdQr"></div>
+        <div class="code" id="cdCode"></div>
+        <button class="btn" id="funBtn"><i class="fa-solid fa-play"></i>Играть без промокода</button>
+    </div>
+
+    <div class="screen" id="endScreen">
+        <div class="tag" id="endTag">Твоё звание</div>
+        <h2 id="rank">Мясоед</h2>
+        <div class="score-big" id="finalScore">0</div>
+        <div class="reason" id="reason">Время вышло</div>
+        <div id="promoBlock">
+            <div class="qr" id="qr"></div>
+            <div class="code" id="code"></div>
+        </div>
+        <button class="btn" id="shareBtn"><i class="fa-solid fa-share-nodes"></i>Поделиться</button>
+        <button class="btn ghost" id="againBtn"><i class="fa-solid fa-rotate-right"></i>Ещё раз</button>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+    /* ================= CONFIG ================= */
+    const { Engine, Bodies, Composite, Events, Body } = Matter;
+    const LEVELS = [
+        null,
+        { n:'Бекон',       r:20,  p:1,  e:'🥓', c1:'#ffb3b8', c2:'#c23a4c' },
+        { n:'Ножка',       r:30,  p:3,  e:'🍗', c1:'#ffc79a', c2:'#b5502a' },
+        { n:'Котлета',     r:45,  p:6,  e:'🍔', c1:'#e98a6c', c2:'#7a2a1c' },
+        { n:'Стейк',       r:60,  p:10, e:'🥩', c1:'#ff7a85', c2:'#8e1426' },
+        { n:'Окорок',      r:80,  p:15, e:'🍖', c1:'#f0a07a', c2:'#6e1d14' },
+        { n:'Золотой Бык', r:100, p:50, e:'🐂', c1:'#fff1b0', c2:'#a87405' }
+    ];
+    const GAME_TIME = 180, CHEF_EVERY = 25, CHEF_HOLD = 2, DANGER_LIMIT = 2;
+    const CD_KEY = 'bull_merge_cooldown', DAY = 864e5;
+
+    const cvs = document.getElementById('canvas'), ctx = cvs.getContext('2d');
+    const $ = id => document.getElementById(id);
+    let W, H, DPR, S, box; // box = {x,y,w,h}
+
+    /* ================= AUDIO MANAGER ================= */
+    const AudioManager = {
+        ac:null,
+        init(){ if(!this.ac){ try{ this.ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(this.ac && this.ac.state==='suspended') this.ac.resume(); },
+        tone(f, d, type='sine', v=.2, f2=null, delay=0){
+            if(!this.ac) return; const t=this.ac.currentTime+delay;
+            const o=this.ac.createOscillator(), g=this.ac.createGain();
+            o.type=type; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+d);
+            g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+            o.connect(g).connect(this.ac.destination); o.start(t); o.stop(t+d+.02);
+        },
+        noise(d, freq, v=.25){
+            if(!this.ac) return; const t=this.ac.currentTime;
+            const len=this.ac.sampleRate*d, buf=this.ac.createBuffer(1,len,this.ac.sampleRate), data=buf.getChannelData(0);
+            for(let i=0;i<len;i++) data[i]=(Math.random()*2-1)*(1-i/len);
+            const s=this.ac.createBufferSource(), f=this.ac.createBiquadFilter(), g=this.ac.createGain();
+            s.buffer=buf; f.type='lowpass'; f.frequency.value=freq; g.gain.value=v;
+            s.connect(f).connect(g).connect(this.ac.destination); s.start(t);
+        },
+        chomp(lvl){ this.noise(.14, 900+lvl*150, .3); this.tone(260-lvl*25, .18, 'sine', .28, 70); },
+        drop(){ this.tone(420,.06,'triangle',.08,260); },
+        thud(){ this.noise(.06,400,.12); },
+        warn(){ this.tone(880,.05,'square',.07); },
+        shoo(){ this.tone(500,.12,'triangle',.15,1200); },
+        bull(){ [523,659,784,1046].forEach((f,i)=>this.tone(f,.4,'triangle',.12,null,i*.07)); this.noise(.3,2000,.25); },
+        final(){ [261,329,392,523].forEach(f=>this.tone(f,1.4,'triangle',.1)); this.tone(130,1.4,'sine',.15); }
+    };
+
+    /* ================= ENGINE ================= */
+    let engine, world, walls = [];
+    function setupLayout(){
+        DPR = Math.min(window.devicePixelRatio||1, 2);
+        W = innerWidth; H = innerHeight;
+        cvs.width = W*DPR; cvs.height = H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+        const top = 200, bottom = 28;
+        const ch = Math.max(300, H - top - bottom);
+        const cw = Math.min(W - 24, 440, ch*0.82);
+        box = { x:(W-cw)/2, y:top, w:cw, h:ch };
+        S = cw/440;
+    }
+    function setupEngine(){
+        engine = Engine.create(); world = engine.world; engine.gravity.y = 1.1;
+        const t = 60, b = box;
+        walls = [
+            Bodies.rectangle(b.x+b.w/2, b.y+b.h+t/2, b.w+t*2, t, {isStatic:true,label:'floor',friction:.6}),
+            Bodies.rectangle(b.x-t/2, b.y+b.h/2-150, t, b.h+300, {isStatic:true,label:'wall',friction:.2}),
+            Bodies.rectangle(b.x+b.w+t/2, b.y+b.h/2-150, t, b.h+300, {isStatic:true,label:'wall',friction:.2})
+        ];
+        Composite.add(world, walls);
+        Events.on(engine, 'collisionStart', onCollide);
+    }
+
+    /* ================= MEAT FACTORY ================= */
+    const MeatFactory = {
+        radius(l){ return LEVELS[l].r*S; },
+        create(x,y,l){
+            const b = Bodies.circle(x,y,this.radius(l),{friction:.5,restitution:.2,frictionAir:.01,density:.0012,label:'meat'});
+            b.lvl=l; b.born=performance.now(); b.pop=0; Composite.add(world,b); return b;
+        },
+        junk(x,y,type){
+            const r=26*S;
+            const b = Bodies.circle(x,y,r,{friction:.6,restitution:.15,label:'junk'});
+            b.type=type; b.r=r; b.born=performance.now(); Composite.add(world,b); return b;
+        },
+        randomLevel(){ const r=Math.random(); return r<.5?1:r<.85?2:3; }
+    };
+
+    /* ================= STATE ================= */
+    let G = null, mergeQ = [], particles = [], rings = [], floats = [];
+    function newState(){
+        return { score:0, time:GAME_TIME, aimX:box.x+box.w/2, cur:MeatFactory.randomLevel(), next:MeatFactory.randomLevel(),
+                 dropping:null, dropT:0, chefT:CHEF_EVERY, hand:null, danger:0, warnTick:0, over:false, fun:false, shake:0 };
+    }
+
+    function onCollide(e){
+        for(const p of e.pairs){
+            const a=p.bodyA, b=p.bodyB;
+            if(G && G.dropping && (a===G.dropping||b===G.dropping)){
+                const o = a===G.dropping?b:a;
+                if(o.label!=='wall'){ G.dropping=null; AudioManager.thud(); }
+            }
+            if(a.label==='meat' && b.label==='meat' && a.lvl===b.lvl && !a.dead && !b.dead){
+                a.dead=b.dead=true;
+                a.collisionFilter.mask=0; b.collisionFilter.mask=0; // отключаем коллизии исчезающих тел
+                mergeQ.push([a,b]);
+            }
+        }
+    }
+    function processMerges(){
+        while(mergeQ.length){
+            const [a,b]=mergeQ.shift(); const l=a.lvl;
+            const x=(a.position.x+b.position.x)/2, y=(a.position.y+b.position.y)/2;
+            Composite.remove(world,a); Composite.remove(world,b);
+            if(G.dropping===a||G.dropping===b) G.dropping=null;
+            if(l<6){
+                const n = MeatFactory.create(x,y,l+1);
+                Body.setVelocity(n,{x:(a.velocity.x+b.velocity.x)/2,y:-1});
+                const pts = LEVELS[l+1].p; addScore(pts,x,y);
+                splash(x,y,LEVELS[l+1].c2,10+l*5,MeatFactory.radius(l+1));
+                AudioManager.chomp(l);
+                if(l+1===6){ G.shake=12; AudioManager.bull(); }
+            } else {
+                addScore(500,x,y); G.shake=20;
+                splash(x,y,'#f2c14e',60,MeatFactory.radius(6)); splash(x,y,'#c2364a',30,MeatFactory.radius(6));
+                AudioManager.bull();
+            }
+        }
+    }
+    function addScore(p,x,y){ G.score+=p; floats.push({x,y,t:0,txt:'+'+p}); $('score').textContent=G.score; }
+
+    /* ================= PARTICLES ================= */
+    function splash(x,y,color,n,r){
+        rings.push({x,y,r:r*.6,max:r*1.8,a:1});
+        for(let i=0;i<n;i++){
+            const ang=Math.random()*Math.PI*2, sp=2+Math.random()*6;
+            particles.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-2,r:2+Math.random()*4*S+1,life:1,c:color});
+        }
+    }
+
+    /* ================= CHEF ================= */
+    const Chef = {
+        spawn(){
+            const x = box.x + 50*S + Math.random()*(box.w-100*S);
+            G.hand = { x, y:-80, ty:box.y-70, t:0, type:Math.random()<.5?'broccoli':'bone', state:'in' };
+        },
+        update(dt){
+            G.chefT -= dt;
+            if(G.chefT<=0 && !G.hand){ this.spawn(); G.chefT=CHEF_EVERY; }
+            const h=G.hand; if(!h) return;
+            if(h.state==='in'){ h.y += (h.ty-h.y)*Math.min(1,dt*10); h.t+=dt;
+                if(h.t>CHEF_HOLD){ MeatFactory.junk(h.x,h.y+40,h.type); h.state='out'; h.dropped=true; AudioManager.drop(); toast('Шеф подкинул мусор!'); }
+            } else { h.y -= dt*900; if(h.y<-160) G.hand=null; }
+        },
+        hit(x,y){
+            const h=G.hand; if(!h||h.state!=='in') return false;
+            if(Math.hypot(x-h.x,y-(h.y+20))<70){ h.state='out'; addScore(5,h.x,h.y+40); AudioManager.shoo(); splash(h.x,h.y+30,'#f4efe9',12,30); return true; }
+            return false;
+        }
+    };
+
+    /* ================= INPUT ================= */
+    let handTapped=false;
+    function clampAim(x){ const r=MeatFactory.radius(G.cur); return Math.max(box.x+r+2,Math.min(box.x+box.w-r-2,x)); }
+    cvs.addEventListener('pointerdown',e=>{
+        if(!G||G.over) return; AudioManager.init();
+        handTapped = Chef.hit(e.clientX,e.clientY);
+        if(!handTapped) G.aimX=clampAim(e.clientX);
+    });
+    cvs.addEventListener('pointermove',e=>{ if(G&&!G.over) G.aimX=clampAim(e.clientX); });
+    cvs.addEventListener('pointerup',e=>{ if(!G||G.over) return; if(handTapped){handTapped=false;return;} drop(); });
+    addEventListener('keydown',e=>{
+        if(!G||G.over) return;
+        if(e.key==='ArrowLeft') G.aimX=clampAim(G.aimX-20);
+        if(e.key==='ArrowRight') G.aimX=clampAim(G.aimX+20);
+        if(e.key===' '||e.key==='ArrowDown') drop();
+    });
+    function drop(){
+        if(G.dropping) return; // блокировка до касания
+        G.dropping = MeatFactory.create(clampAim(G.aimX), box.y-40, G.cur);
+        G.dropT=0; AudioManager.drop();
+        G.cur=G.next; G.next=MeatFactory.randomLevel(); $('next').textContent=LEVELS[G.next].e;
+    }
+
+    /* ================= GAME LOOP ================= */
+    let last=0, acc=0, running=false;
+    function loop(t){
+        if(!running) return;
+        const dt=Math.min(.05,(t-last)/1000||0); last=t;
+        if(!G.over) update(dt);
+        draw(dt);
+        requestAnimationFrame(loop);
+    }
+    function update(dt){
+        acc+=dt; while(acc>=1/60){ Engine.update(engine,1000/60); processMerges(); acc-=1/60; }
+        if(G.dropping){ G.dropT+=dt; if(G.dropT>2.5) G.dropping=null; }
+        G.time-=dt;
+        const s=Math.max(0,Math.ceil(G.time));
+        $('timer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+        $('timer').classList.toggle('low',s<=20);
+        if(G.time<=0) return endGame('time');
+        Chef.update(dt);
+        // проверка переполнения
+        const lineY=box.y+8, now=performance.now(); let over=false;
+        for(const b of Composite.allBodies(world)){
+            if(b.isStatic||b===G.dropping||b.dead||now-b.born<1200) continue;
+            const r=b.circleRadius||20; if(b.position.y-r<lineY && Math.abs(b.velocity.y)<2){ over=true; break; }
+        }
+        if(over){ G.danger+=dt; G.warnTick-=dt; if(G.warnTick<=0){AudioManager.warn();G.warnTick=.4;} } else G.danger=Math.max(0,G.danger-dt*2);
+        $('warn').classList.toggle('on',G.danger>0);
+        if(G.danger>DANGER_LIMIT) endGame('overflow');
+        // удаляем вылетевшие тела
+        for(const b of Composite.allBodies(world)) if(!b.isStatic && b.position.y>H+300) Composite.remove(world,b);
+    }
+
+    /* ================= RENDER ================= */
+    function drawMeat(x,y,r,l,ang,alpha=1){
+        const L=LEVELS[l]; ctx.save(); ctx.globalAlpha=alpha; ctx.translate(x,y);
+        const g=ctx.createRadialGradient(-r*.35,-r*.35,r*.1,0,0,r);
+        g.addColorStop(0,L.c1); g.addColorStop(1,L.c2);
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+        ctx.lineWidth=Math.max(1.5,r*.06); ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.stroke();
+        // блик
+        ctx.fillStyle='rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(-r*.38,-r*.42,r*.32,r*.18,-.6,0,Math.PI*2); ctx.fill();
+        ctx.rotate(ang); ctx.font=`${r*1.05}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#000'; ctx.fillText(L.e,0,r*.06);
+        ctx.restore();
+    }
+    function drawJunk(b){
+        const r=b.circleRadius, x=b.position.x, y=b.position.y; ctx.save(); ctx.translate(x,y);
+        const br=b.type==='broccoli';
+        const g=ctx.createRadialGradient(-r*.3,-r*.3,2,0,0,r);
+        g.addColorStop(0,br?'#b6ff4a':'#ffffff'); g.addColorStop(1,br?'#2f8a0e':'#b9b2a8');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+        ctx.lineWidth=2; ctx.strokeStyle=br?'#1a4d05':'#7a736b'; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.rotate(b.angle); ctx.font=`${r*1.1}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#000'; ctx.fillText(br?'🥦':'🦴',0,2);
+        ctx.restore();
+    }
+    function drawHand(h){
+        ctx.save();
+        // рукав
+        ctx.fillStyle='#f4efe9'; ctx.strokeStyle='#cfc6be'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.roundRect(h.x-22,h.y-260,44,250,10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#ddd5cc'; ctx.fillRect(h.x-22,h.y-30,44,8);
+        // ладонь
+        ctx.fillStyle='#f0b48c'; ctx.beginPath(); ctx.arc(h.x,h.y,20,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+        if(!h.dropped){ ctx.font='40px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#000'; ctx.fillText(h.type==='broccoli'?'🥦':'🦴',h.x,h.y+34); }
+        if(h.state==='in'){ // индикатор времени
+            const k=1-h.t/CHEF_HOLD; ctx.strokeStyle='#ff3b2f'; ctx.lineWidth=4; ctx.lineCap='round';
+            ctx.beginPath(); ctx.arc(h.x,h.y+20,54,-Math.PI/2,-Math.PI/2+Math.PI*2*k); ctx.stroke();
+            ctx.fillStyle='#ff3b2f'; ctx.font='700 11px Unbounded'; ctx.fillText('ТАПНИ!',h.x,h.y+92);
+        }
+    }
+    function draw(dt){
+        ctx.fillStyle='#111'; ctx.fillRect(0,0,W,H);
+        if(!G) return;
+        ctx.save();
+        if(G.shake>0){ ctx.translate((Math.random()-.5)*G.shake,(Math.random()-.5)*G.shake); G.shake*=.88; if(G.shake<.5)G.shake=0; }
+        const b=box;
+        // стекло контейнера
+        const gg=ctx.createLinearGradient(0,b.y,0,b.y+b.h);
+        gg.addColorStop(0,'rgba(255,59,47,0)'); gg.addColorStop(1,'rgba(255,59,47,.09)');
+        ctx.fillStyle=gg; ctx.fillRect(b.x,b.y,b.w,b.h);
+        ctx.strokeStyle='rgba(255,90,80,.55)'; ctx.lineWidth=3; ctx.lineJoin='round';
+        ctx.beginPath(); ctx.moveTo(b.x,b.y-20); ctx.lineTo(b.x,b.y+b.h); ctx.lineTo(b.x+b.w,b.y+b.h); ctx.lineTo(b.x+b.w,b.y-20); ctx.stroke();
+        ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(b.x+8,b.y); ctx.lineTo(b.x+8,b.y+b.h-8); ctx.stroke();
+        // красная линия
+        const dang=G.danger>0;
+        ctx.strokeStyle=dang?`rgba(255,59,47,${.5+Math.sin(performance.now()/80)*.5})`:'rgba(255,59,47,.6)';
+        ctx.lineWidth=2; ctx.setLineDash([8,6]); ctx.beginPath(); ctx.moveTo(b.x,b.y+8); ctx.lineTo(b.x+b.w,b.y+8); ctx.stroke(); ctx.setLineDash([]);
+        // прицел + мясорубка
+        if(!G.over){
+            const ax=clampAim(G.aimX), r=MeatFactory.radius(G.cur);
+            ctx.strokeStyle='rgba(244,239,233,.14)'; ctx.setLineDash([3,7]); ctx.beginPath(); ctx.moveTo(ax,b.y-40); ctx.lineTo(ax,b.y+b.h); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle='#2a2522'; ctx.beginPath(); ctx.roundRect(ax-26,b.y-108,52,30,8); ctx.fill();
+            ctx.fillStyle='#3a332f'; ctx.fillRect(ax-10,b.y-80,20,14);
+            ctx.fillStyle='#ff3b2f'; ctx.beginPath(); ctx.arc(ax,b.y-93,5,0,Math.PI*2); ctx.fill();
+            drawMeat(ax,b.y-40,r,G.cur,0,G.dropping?.35:1);
+        }
+        // тела
+        for(const bd of Composite.allBodies(world)){
+            if(bd.isStatic) continue;
+            if(bd.label==='meat'){ bd.pop=Math.min(1,bd.pop+dt*6); const sc=.6+.4*bd.pop; drawMeat(bd.position.x,bd.position.y,bd.circleRadius*sc,bd.lvl,bd.angle); }
+            else if(bd.label==='junk') drawJunk(bd);
+        }
+        // вспышки
+        for(let i=rings.length-1;i>=0;i--){ const r=rings[i]; r.r+=(r.max-r.r)*.18; r.a-=dt*2.5; if(r.a<=0){rings.splice(i,1);continue;}
+            ctx.fillStyle=`rgba(255,240,220,${r.a*.35})`; ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,Math.PI*2); ctx.fill(); }
+        // соус
+        for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.vy+=.25; p.x+=p.vx; p.y+=p.vy; p.vx*=.98; p.life-=dt*1.4;
+            if(p.life<=0){particles.splice(i,1);continue;} ctx.globalAlpha=p.life; ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
+        ctx.globalAlpha=1;
+        // очки
+        ctx.textAlign='center'; ctx.font='900 18px Unbounded';
+        for(let i=floats.length-1;i>=0;i--){ const f=floats[i]; f.t+=dt; if(f.t>1){floats.splice(i,1);continue;}
+            ctx.fillStyle=`rgba(242,193,78,${1-f.t})`; ctx.fillText(f.txt,f.x,f.y-f.t*50); }
+        if(G.hand) drawHand(G.hand);
+        ctx.restore();
+    }
+
+    /* ================= UI MANAGER ================= */
+    function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); if(id) $(id).classList.add('on'); }
+    let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1800); }
+    function getCooldown(){ try{ const d=JSON.parse(localStorage.getItem(CD_KEY)); if(d&&Date.now()-d.t<DAY) return d; }catch(e){} return null; }
+    function makeCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return 'BULL-MERGE-'+s; }
+    function renderQR(el,text){ el.innerHTML=''; if(window.QRCode) new QRCode(el,{text,width:150,height:150,colorDark:'#111111',colorLight:'#ffffff'}); else el.textContent=text; }
+    function rankOf(s){ return s<100?'Вегетарианец':s<500?'Телятина':s<1500?'Мясоед':s<3000?'Мастер Гриля':'Легенда The Бык'; }
+
+    function startGame(fun){
+        AudioManager.init();
+        setupLayout(); setupEngine();
+        mergeQ=[];particles=[];rings=[];floats=[];
+        G=newState(); G.fun=!!fun;
+        $('score').textContent='0'; $('next').textContent=LEVELS[G.next].e;
+        $('hud').classList.add('on'); show(null);
+        if(!running){ running=true; last=performance.now(); requestAnimationFrame(loop); }
+    }
+    function endGame(reason){
+        if(G.over) return; G.over=true; $('warn').classList.remove('on'); AudioManager.final();
+        setTimeout(()=>{
+            $('rank').textContent=rankOf(G.score);
+            $('finalScore').textContent=G.score;
+            $('reason').textContent=reason==='time'?'Время вышло':'Контейнер переполнен';
+            if(G.fun){ $('promoBlock').style.display='none'; }
+            else {
+                const code=makeCode();
+                localStorage.setItem(CD_KEY,JSON.stringify({t:Date.now(),code,score:G.score}));
+                $('promoBlock').style.display='block'; $('code').textContent=code; renderQR($('qr'),code);
+            }
+            $('hud').classList.remove('on'); show('endScreen');
+        },700);
+    }
+
+    $('startBtn').onclick=()=>{
+        AudioManager.init();
+        const cd=getCooldown();
+        if(cd){
+            const hrs=Math.ceil((DAY-(Date.now()-cd.t))/36e5);
+            $('cdText').textContent=`Твой промокод уже ждёт тебя. Новый — через ${hrs} ч. Рекорд: ${cd.score}.`;
+            $('cdCode').textContent=cd.code; renderQR($('cdQr'),cd.code); show('cooldownScreen');
+        } else startGame(false);
+    };
+    $('funBtn').onclick=()=>startGame(true);
+    $('againBtn').onclick=()=>{ getCooldown()?startGame(true):startGame(false); };
+    $('shareBtn').onclick=async()=>{
+        const text=`Я собрал Золотого Быка в The Бык! Мой рекорд: ${G?G.score:0}!`;
+        try{
+            if(navigator.share){ await navigator.share({title:'Мясной Синтез',text,url:location.href}); }
+            else { await navigator.clipboard.writeText(text+' '+location.href); toast('Текст скопирован'); }
+        }catch(e){ toast('Не удалось поделиться'); }
+    };
+    setupLayout();
+    addEventListener('resize',()=>{ if(!G||G.over) setupLayout(); });
+    document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+    </script>
+</body>
+</html>
