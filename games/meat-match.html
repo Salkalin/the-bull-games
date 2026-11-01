@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- PROTECTED: meta type -->
+    <meta name="type" value="app" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мясной Матч — The Бык</title>
+    <meta property="og:title" content="Мясной Матч — The Бык">
+    <meta property="og:description" content="Match-3 с эволюцией продуктов: собери Золотого Быка за 3 минуты.">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta property="og:type" content="website">
+    <style>
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{margin:0;overflow:hidden;background:#111;color:#f3ece4;font-family:Manrope,sans-serif;height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;
+            background-image:repeating-linear-gradient(90deg,#141210 0 18px,#0d0c0b 18px 22px);}
+        #app{width:min(94vw,500px);display:flex;flex-direction:column;gap:14px}
+        header{display:flex;justify-content:space-between;align-items:flex-end}
+        h1{font-family:Unbounded;font-weight:800;font-size:20px;margin:0;color:#f3ece4;letter-spacing:-.5px}
+        h1 span{color:#d6261f}
+        .sub{font-size:11px;color:#8a7f74;text-transform:uppercase;letter-spacing:2px}
+        .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+        .stat{background:#1a1715;border:1px solid #2a2420;border-radius:10px;padding:10px 12px}
+        .stat small{display:block;font-size:10px;color:#8a7f74;text-transform:uppercase;letter-spacing:1.5px}
+        .stat b{font-family:Unbounded;font-size:20px;color:#f3ece4}
+        .stat i{color:#d6a630;margin-right:6px;font-size:14px}
+        .stat.warn b{color:#d6261f}
+        #bar{height:4px;background:#2a2420;border-radius:4px;overflow:hidden}
+        #bar div{height:100%;background:#d6261f;width:100%;transition:width 1s linear}
+        #board{position:relative;width:100%;aspect-ratio:1;background:#0b0a09;border-radius:14px;border:1px solid #d6261f55;box-shadow:inset 0 0 40px #d6261f22;overflow:hidden;touch-action:none;user-select:none}
+        .tile{position:absolute;left:0;top:0;width:calc(100%/7);height:calc(100%/7);padding:3px;transition:transform .25s cubic-bezier(.3,.7,.4,1);}
+        .tile .in{width:100%;height:100%;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,4.5vw,26px);transition:transform .2s,opacity .2s;position:relative}
+        .tile.pop .in{transform:scale(0);opacity:0}
+        .tile.sel .in{transform:scale(.88)}
+        .tile.born .in{animation:born .4s}
+        @keyframes born{0%{transform:scale(1.6);filter:brightness(3)}100%{transform:scale(1)}}
+        .k-g .in{background:linear-gradient(160deg,#4fa04a,#24602a);color:#e8ffe0}
+        .k-m .in{background:linear-gradient(160deg,#e0413a,#8e1712);color:#ffe8e4}
+        .k-b .in{background:linear-gradient(160deg,#f0a040,#a85a14);color:#fff3e0}
+        .k-x .in{background:linear-gradient(160deg,#9a948e,#55504b);color:#f2f0ee}
+        .k-c .in{background:radial-gradient(circle at 50% 70%,#3a1a10,#141010);color:#ff6a2a;border:1px solid #ff6a2a66}
+        .l1 .in{box-shadow:inset 0 0 0 2px #d6a630}
+        .l2 .in{box-shadow:inset 0 0 0 3px #ffd75e,0 0 10px #d6a63088}
+        .lvl{position:absolute;top:2px;right:5px;font-size:9px;font-weight:800;color:#ffd75e}
+        #flash{position:fixed;inset:0;background:#ffd75e;opacity:0;pointer-events:none;transition:opacity .4s}
+        #toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);font-family:Unbounded;font-weight:800;font-size:24px;color:#ffd75e;opacity:0;pointer-events:none;transition:.3s;text-align:center;text-shadow:0 2px 0 #000;z-index:5}
+        #toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+        .legend{display:flex;justify-content:space-between;font-size:11px;color:#8a7f74}
+        .legend i{margin:0 2px}
+        .overlay{position:fixed;inset:0;background:#0d0c0bf2;display:flex;align-items:center;justify-content:center;z-index:10;padding:20px}
+        .overlay.hide{display:none}
+        .card{width:min(92vw,420px);text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+        .card h2{font-family:Unbounded;font-size:28px;margin:0;color:#f3ece4}
+        .card p{margin:0;color:#b5aa9e;line-height:1.55;font-size:14px}
+        .rank{font-family:Unbounded;color:#ffd75e;font-size:22px}
+        .big{font-family:Unbounded;font-size:44px;color:#d6261f;font-weight:800}
+        .btn{border:0;border-radius:10px;padding:14px 22px;font-family:Manrope;font-weight:800;font-size:15px;cursor:pointer;background:#d6261f;color:#fff;transition:.2s;text-decoration:none;display:inline-flex;gap:8px;align-items:center}
+        .btn:hover{background:#b81d17}
+        .btn.ghost{background:#1a1715;color:#f3ece4;border:1px solid #2a2420}
+        .btn.ghost:hover{background:#25201c}
+        .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+        #qr{width:150px;height:150px;border-radius:10px;background:#fff;padding:8px}
+        .code{font-family:Unbounded;letter-spacing:2px;color:#f3ece4;background:#1a1715;padding:8px 14px;border-radius:8px;border:1px dashed #d6a630}
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+</head>
+<body>
+<div id="app">
+  <header><div><div class="sub">The Бык представляет</div><h1>Мясной <span>Матч</span></h1></div>
+  <button class="btn ghost" id="mute" style="padding:10px 12px"><i class="fa-solid fa-volume-high" style="color:#f3ece4"></i></button></header>
+  <div class="stats">
+    <div class="stat"><small>Очки</small><b id="score">0</b></div>
+    <div class="stat"><small>Время</small><b id="time">3:00</b></div>
+    <div class="stat" id="coalStat"><small>Угольки</small><b id="coal">0/10</b></div>
+  </div>
+  <div id="bar"><div></div></div>
+  <div id="board"><div id="toast"></div></div>
+  <div class="legend">
+    <span><i class="fa-solid fa-leaf" style="color:#4fa04a"></i><i class="fa-solid fa-seedling" style="color:#4fa04a"></i><i class="fa-solid fa-tree" style="color:#4fa04a"></i> ряд</span>
+    <span><i class="fa-solid fa-drumstick-bite" style="color:#e0413a"></i><i class="fa-solid fa-burger" style="color:#e0413a"></i><i class="fa-solid fa-bacon" style="color:#e0413a"></i> всё поле</span>
+    <span><i class="fa-solid fa-bread-slice" style="color:#f0a040"></i><i class="fa-solid fa-hotdog" style="color:#f0a040"></i><i class="fa-solid fa-pizza-slice" style="color:#f0a040"></i> столбец</span>
+  </div>
+</div>
+<div id="flash"></div>
+<div class="overlay" id="start"><div class="card">
+  <i class="fa-solid fa-fire-flame-curved" style="font-size:46px;color:#d6261f"></i>
+  <h2>Мясной Матч</h2>
+  <p>Свайпай соседние тайлы. 3 одинаковых — эволюция в продукт уровнем выше. 3 тайла 3-го уровня — мега-бонус. Окорок ×3 = <b style="color:#ffd75e">Золотой Бык</b>.<br>Каждые 30 сек падает уголёк — убирай его матчем рядом. Больше 10 — конец.</p>
+  <button class="btn" id="go"><i class="fa-solid fa-play" style="color:#fff"></i>Начать — 3 минуты</button>
+</div></div>
+<div class="overlay hide" id="end"><div class="card">
+  <div class="sub" id="reason">Время вышло</div>
+  <div class="big" id="fscore">0</div>
+  <div class="rank" id="rank"></div>
+  <img id="qr" alt="QR">
+  <div class="code" id="promo"></div>
+  <p>Покажи QR на кассе The Бык и получи бонус</p>
+  <div class="row">
+    <a class="btn ghost" id="tg" target="_blank"><i class="fa-brands fa-telegram" style="color:#2aa3df"></i>Telegram</a>
+    <a class="btn ghost" id="wa" target="_blank"><i class="fa-brands fa-whatsapp" style="color:#3fc35a"></i>WhatsApp</a>
+  </div>
+  <button class="btn" id="again"><i class="fa-solid fa-rotate-right" style="color:#fff"></i>Ещё раз</button>
+</div></div>
+<script>
+const N=7, board=document.getElementById('board');
+const ICONS={g:['fa-leaf','fa-seedling','fa-tree'],m:['fa-drumstick-bite','fa-burger','fa-bacon'],b:['fa-bread-slice','fa-hotdog','fa-pizza-slice'],x:['fa-bone'],c:['fa-fire']};
+const NAMES={g:['Капуста','Салат','Брокколи'],m:['Стейк','Котлета','Окорок'],b:['Хлеб','Сэндвич','Пицца']};
+const MULT=[1,2,5];
+let grid,els={},uid=0,score=0,timeLeft=180,busy=false,over=true,timer,coalTimer,muted=false,actx;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const S=()=>board.clientWidth/N;
+
+function tone(f,d=.12,type='triangle',v=.15){if(muted)return;try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.setValueAtTime(f,actx.currentTime);o.frequency.exponentialRampToValueAtTime(f*1.5,actx.currentTime+d);g.gain.setValueAtTime(v,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+d)}catch(e){}}
+function flash(o=.6){const f=document.getElementById('flash');f.style.opacity=o;setTimeout(()=>f.style.opacity=0,120)}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1000)}
+const rndKind=()=>{const r=Math.random();return r<.29?'g':r<.58?'m':r<.87?'b':'x'};
+const mk=(kind,level=0)=>({id:++uid,kind,level});
+const same=(a,b)=>a&&b&&a.kind!=='c'&&a.kind===b.kind&&a.level===b.level;
+
+function initGrid(){
+  grid=[];for(let r=0;r<N;r++){grid[r]=[];for(let c=0;c<N;c++){let t;do{t=mk(rndKind())}while((c>1&&same(t,grid[r][c-1])&&same(t,grid[r][c-2]))||(r>1&&same(t,grid[r-1][c])&&same(t,grid[r-2][c])));grid[r][c]=t}}
+}
+function render(spawnFrom){
+  const s=S(),alive=new Set();
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){const t=grid[r][c];if(!t)continue;alive.add(t.id);let el=els[t.id];
+    if(!el){el=document.createElement('div');el.className=`tile k-${t.kind} l${t.level}`;el.innerHTML=`<div class="in"><i class="fa-solid ${ICONS[t.kind][t.level]}"></i>${t.level?`<span class="lvl">${'★'.repeat(t.level)}</span>`:''}</div>`;
+      const sr=spawnFrom&&spawnFrom[t.id]!==undefined?spawnFrom[t.id]:r;el.style.transition='none';el.style.transform=`translate(${c*s}px,${sr*s}px)`;board.appendChild(el);els[t.id]=el;el.offsetWidth;el.style.transition='';if(t.born){el.classList.add('born');t.born=false}}
+    el.style.transform=`translate(${c*s}px,${r*s}px)`}
+  for(const id in els)if(!alive.has(+id)){els[id].remove();delete els[id]}
+  const cc=countCoal();document.getElementById('coal').textContent=cc+'/10';document.getElementById('coalStat').classList.toggle('warn',cc>=7);
+}
+const countCoal=()=>grid.flat().filter(t=>t&&t.kind==='c').length;
+
+function findRuns(){
+  const runs=[];
+  for(let r=0;r<N;r++){let c=0;while(c<N){let e=c+1;while(e<N&&same(grid[r][c],grid[r][e]))e++;if(e-c>=3){const cells=[];for(let k=c;k<e;k++)cells.push([r,k]);runs.push({cells,...grid[r][c]})}c=e}}
+  for(let c=0;c<N;c++){let r=0;while(r<N){let e=r+1;while(e<N&&same(grid[r][c],grid[e][c]))e++;if(e-r>=3){const cells=[];for(let k=r;k<e;k++)cells.push([k,c]);runs.push({cells,...grid[r][c]})}r=e}}
+  return runs;
+}
+async function resolve(swap){
+  let combo=0;
+  while(true){
+    const runs=findRuns();if(!runs.length)break;combo++;
+    const rem=new Set(),spawns=[],K=(r,c)=>r*N+c;let bull=false,gain=0;
+    for(const run of runs){
+      run.cells.forEach(([r,c])=>rem.add(K(r,c)));
+      if(run.kind==='x'){tone(180,.15,'square',.08);continue}
+      gain+=run.cells.length*10*MULT[run.level];
+      let pos=run.cells[Math.floor(run.cells.length/2)];
+      if(swap){const f=run.cells.find(([r,c])=>swap.some(([a,b])=>a===r&&b===c));if(f)pos=f}
+      if(run.level<2){if(!spawns.some(s=>s.r===pos[0]&&s.c===pos[1]))spawns.push({r:pos[0],c:pos[1],kind:run.kind,level:run.level+1});tone(440+run.level*220,.18)}
+      else{
+        if(run.kind==='g'){for(let c=0;c<N;c++)rem.add(K(pos[0],c));gain+=500;toast('Витаминный взрыв!');flash(.4);tone(660,.4,'sawtooth')}
+        if(run.kind==='b'){for(let r=0;r<N;r++)rem.add(K(r,pos[1]));gain+=500;toast('Сырный фонтан!');flash(.4);tone(520,.4,'sawtooth')}
+        if(run.kind==='m'){bull=true;for(let i=0;i<N*N;i++)rem.add(i);gain+=3000;toast('ЗОЛОТОЙ БЫК!');flash(1);navigator.vibrate&&navigator.vibrate([200,80,300]);[300,400,500,700].forEach((f,i)=>setTimeout(()=>tone(f,.3,'square',.12),i*90))}
+      }
+    }
+    [...rem].forEach(k=>{const r=Math.floor(k/N),c=k%N;[[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;if(rr>=0&&rr<N&&cc>=0&&cc<N&&grid[rr][cc]&&grid[rr][cc].kind==='c')rem.add(K(rr,cc))})});
+    score+=gain*combo;document.getElementById('score').textContent=score;
+    if(combo>1)toast('Комбо ×'+combo);
+    rem.forEach(k=>{const t=grid[Math.floor(k/N)][k%N];if(t&&els[t.id])els[t.id].classList.add('pop')});
+    await sleep(220);
+    rem.forEach(k=>grid[Math.floor(k/N)][k%N]=null);
+    if(!bull)spawns.forEach(s=>{const t=mk(s.kind,s.level);t.born=true;grid[s.r][s.c]=t;if(s.level===1)flash(.15)});
+    render();await sleep(120);
+    gravity();await sleep(300);swap=null;
+  }
+}
+function gravity(){
+  const from={};
+  for(let c=0;c<N;c++){const col=[];for(let r=N-1;r>=0;r--)if(grid[r][c])col.push(grid[r][c]);let missing=N-col.length;
+    for(let r=N-1,i=0;r>=0;r--,i++){if(i<col.length)grid[r][c]=col[i];else{const t=mk(rndKind());from[t.id]=r-missing;grid[r][c]=t}}}
+  render(from);
+}
+async function trySwap(a,b){
+  const A=grid[a[0]][a[1]],B=grid[b[0]][b[1]];if(!A||!B||A.kind==='c'||B.kind==='c')return;
+  busy=true;grid[a[0]][a[1]]=B;grid[b[0]][b[1]]=A;render();tone(300,.06,'sine',.08);await sleep(260);
+  if(findRuns().length)await resolve([a,b]);
+  else{grid[a[0]][a[1]]=A;grid[b[0]][b[1]]=B;render();await sleep(260)}
+  busy=false;checkEnd();
+}
+let start=null;
+board.addEventListener('pointerdown',e=>{if(busy||over)return;const rc=board.getBoundingClientRect(),s=S();const r=Math.floor((e.clientY-rc.top)/s),c=Math.floor((e.clientX-rc.left)/s);if(r<0||r>=N||c<0||c>=N)return;start={x:e.clientX,y:e.clientY,r,c};const t=grid[r][c];t&&els[t.id]&&els[t.id].classList.add('sel')});
+window.addEventListener('pointermove',e=>{if(!start)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.max(Math.abs(dx),Math.abs(dy))<S()*.3)return;
+  let r=start.r,c=start.c;Math.abs(dx)>Math.abs(dy)?c+=Math.sign(dx):r+=Math.sign(dy);const a=[start.r,start.c];clearSel();start=null;if(r>=0&&r<N&&c>=0&&c<N)trySwap(a,[r,c])});
+window.addEventListener('pointerup',()=>{start=null;clearSel()});
+function clearSel(){document.querySelectorAll('.sel').forEach(e=>e.classList.remove('sel'))}
+
+async function dropCoal(){
+  if(over)return;while(busy)await sleep(100);
+  const cols=[...Array(N).keys()].filter(c=>grid[0][c].kind!=='c');if(!cols.length){countCoal();return}
+  const c=cols[Math.floor(Math.random()*cols.length)];
+  for(let r=0;r<N-1;r++){} // coal enters top, tiles below unchanged
+  const t=mk('c');grid[0][c]=t;render({[t.id]:-1});
+  toast('Огонь Шефа!');tone(120,.3,'sawtooth',.1);checkEnd();
+}
+function fmt(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function startGame(){
+  for(const id in els)els[id].remove();els={};score=0;timeLeft=180;over=false;busy=false;
+  document.getElementById('score').textContent=0;document.getElementById('time').textContent=fmt(180);
+  document.querySelector('#bar div').style.width='100%';
+  initGrid();render();
+  document.getElementById('start').classList.add('hide');document.getElementById('end').classList.add('hide');
+  clearInterval(timer);timer=setInterval(()=>{timeLeft--;document.getElementById('time').textContent=fmt(timeLeft);document.querySelector('#bar div').style.width=(timeLeft/180*100)+'%';
+    if(timeLeft>0&&timeLeft%30===0)dropCoal();if(timeLeft<=0)endGame('Время вышло')},1000);
+}
+function checkEnd(){if(!over&&countCoal()>10)endGame('Гриль переполнен угольками')}
+function endGame(reason){
+  if(over)return;over=true;clearInterval(timer);
+  const rank=score<1500?'Вегетарианец':score<4000?'Мясоед':score<8000?'Мастер Гриля':'Легенда The Бык';
+  const code='BYK-'+(score<1500?'VEG':score<4000?'MEAT':score<8000?'GRILL':'LEGEND')+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
+  document.getElementById('reason').textContent=reason;document.getElementById('fscore').textContent=score;
+  document.getElementById('rank').textContent=rank;document.getElementById('promo').textContent=code;
+  document.getElementById('qr').src='https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='+encodeURIComponent('THEBYK PROMO '+code);
+  const msg=`Я набрал ${score} очков в «Мясном Матче» и стал «${rank}»! Сможешь круче?`,url=location.href;
+  document.getElementById('tg').href='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(msg);
+  document.getElementById('wa').href='https://wa.me/?text='+encodeURIComponent(msg+' '+url);
+  tone(220,.5,'sawtooth',.1);
+  setTimeout(()=>document.getElementById('end').classList.remove('hide'),500);
+}
+document.getElementById('go').onclick=startGame;
+document.getElementById('again').onclick=startGame;
+document.getElementById('mute').onclick=function(){muted=!muted;this.innerHTML=`<i class="fa-solid ${muted?'fa-volume-xmark':'fa-volume-high'}" style="color:#f3ece4"></i>`};
+window.addEventListener('resize',()=>{if(grid){Object.values(els).forEach(e=>e.style.transition='none');render();requestAnimationFrame(()=>Object.values(els).forEach(e=>e.style.transition=''))}});
+initGrid();render();
+</script>
+</body>
+</html>
