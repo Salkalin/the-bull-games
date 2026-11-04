@@ -19,7 +19,7 @@
         .pill i{color:#e0482f}
         #warn{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#e0482f;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;display:none;text-align:center;animation:p .5s infinite alternate}
         @keyframes p{to{transform:translateX(-50%) scale(1.06)}}
-        .screen{position:fixed;inset:0;background:rgba(21,17,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+        .screen{position:fixed;inset:0;background:rgba(21,17,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;overflow-y:auto}
         .screen h1{font-size:52px;margin:0 0 8px;color:#f4efe9;letter-spacing:-1px;line-height:1}
         .screen h1 span{color:#e0482f}
         .screen p{color:#b9aea4;max-width:340px;line-height:1.6;margin:0 0 24px}
@@ -39,10 +39,19 @@
         #over span{color:#e0482f}
         #over.on{opacity:1;transform:scale(1)}
         .code{margin-top:12px;background:#f4efe9;color:#e0482f;padding:6px 16px;border-radius:8px;font-weight:700;letter-spacing:2px}
+        
+        /* Стили турнирной таблицы */
+        #leaderboard { margin: 10px 0; text-align: left; width: 100%; max-width: 360px; }
+        .lb-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; letter-spacing: .14em; color: #e8b04a; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+        .lb-list { list-style: none; padding: 0; margin: 0; }
+        .lb-list li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; padding: 9px 12px; border-radius: 10px; font-size: 14px; color: #d9cfc6; border-bottom: 1px solid #2a2522; }
+        .lb-list li.lb-me { background: #2a1a14; border: 1px solid #e8b04a; color: #f4efe9; font-weight: 700; }
+        .lb-pos { font-size: 16px; text-align: center; }
+        .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-score { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #e8b04a; }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
 </head>
 <body>
     <canvas id="canvas"></canvas>
@@ -68,13 +77,77 @@
     <div class="screen hidden" id="end">
         <h1>ЗАБЕГ <span>ОКОНЧЕН</span></h1>
         <div class="rank" id="rank"></div>
+        <div id="leaderboard"></div>
         <div class="big" id="final">0</div>
         <div class="qr"><img id="qr" alt="QR"></div>
         <div class="code" id="promo"></div>
         <p style="margin-top:14px">Покажи этот QR официанту!</p>
         <button id="again">ЗАНОВО</button>
     </div>
+
 <script>
+// --- Генератор турнирной таблицы с уникальными ID ---
+window.Leaderboard = {
+  init: function (opts) {
+    const el = document.getElementById(opts.containerId);
+    if (!el) return;
+    const NAMES = ['Мясник', 'Гриль-Мастер', 'Антон', 'Шеф', 'Гость', 'Стейк-Любитель', 'Марина', 'Огонь', 'Дмитрий', 'Котлета', 'Бургер-Кинг', 'Таня', 'Ростбиф', 'Копчёный', 'Сергей', 'Уголёк', 'Максим', 'Гурман', 'Юля'];
+    const myScore = Number(opts.score) || 0;
+    
+    let myId = localStorage.getItem('bull_player_id');
+    if (!myId) {
+      myId = Math.floor(100 + Math.random() * 900);
+      localStorage.setItem('bull_player_id', myId);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = 'bull_lb_' + opts.game + '_' + today;
+    let todayData = JSON.parse(localStorage.getItem(cacheKey));
+
+    if (!todayData) {
+      todayData = { fakes: [] };
+      const usedNames = new Set();
+      for (let i = 0; i < 8; i++) {
+        let name;
+        do { name = NAMES[Math.floor(Math.random() * NAMES.length)]; } while (usedNames.has(name));
+        usedNames.add(name);
+        const fakeId = Math.floor(100 + Math.random() * 900);
+        const factor = 0.4 + Math.random() * 1.0;
+        todayData.fakes.push({ id: fakeId, name: name, score: Math.max(100, Math.round(myScore * factor)), me: false });
+      }
+      localStorage.setItem(cacheKey, JSON.stringify(todayData));
+    }
+
+    const rows = JSON.parse(JSON.stringify(todayData.fakes)); 
+    const existingMe = rows.find(r => r.id == myId);
+    if (existingMe) {
+      if (myScore > existingMe.score) existingMe.score = myScore;
+    } else {
+      rows.push({ id: myId, name: 'Гость', score: myScore, me: true });
+    }
+
+    rows.sort((a, b) => b.score - a.score);
+    const top = rows.slice(0, 7);
+    if (!top.some(r => r.id == myId)) top.push(rows.find(r => r.id == myId));
+    
+    const medals = ['🥇', '🥈', '🥉'];
+    let html = '<div class="lb-title">🏆 ТОП СЕГОДНЯ</div><ol class="lb-list">';
+    
+    top.forEach((r, i) => {
+      const isMe = r.id == myId;
+      const pos = medals[i] || (i + 1);
+      const displayName = `${r.name} #${r.id}`;
+      html += `<li class="${isMe ? 'lb-me' : ''}">
+        <span class="lb-pos">${pos}</span>
+        <span class="lb-name">${displayName}${isMe ? ' ←' : ''}</span>
+        <span class="lb-score">${r.score}</span>
+      </li>`;
+    });
+    html += '</ol>';
+    el.innerHTML = html;
+  }
+};
+
 const $=id=>document.getElementById(id);
 const renderer=new THREE.WebGLRenderer({canvas:$('canvas'),antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -92,15 +165,12 @@ sun.shadow.camera.left=-10;sun.shadow.camera.right=10;sun.shadow.camera.top=10;s
 scene.add(sun);
 
 const LANE=2.6, M=(c,o={})=>new THREE.MeshLambertMaterial(Object.assign({color:c},o));
-// Пол-плитка
 const tc=document.createElement('canvas');tc.width=tc.height=128;const g=tc.getContext('2d');
 g.fillStyle='#d9d2c8';g.fillRect(0,0,128,128);g.strokeStyle='#a99f94';g.lineWidth=4;g.strokeRect(0,0,64,64);g.strokeRect(64,64,64,64);g.strokeRect(64,0,64,64);g.strokeRect(0,64,64,64);
 const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(4,60);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,240),M(0xffffff,{map:tex}));
 floor.rotation.x=-Math.PI/2;floor.position.z=-100;floor.receiveShadow=true;scene.add(floor);
-// Стены
 [-6,6].forEach(x=>{const w=new THREE.Mesh(new THREE.BoxGeometry(0.5,8,240),M(0x8a3b2b));w.position.set(x,4,-100);scene.add(w);});
-// Декор: рельсы с крюками сверху, движутся
 const deco=[];
 for(let i=0;i<14;i++){
   const gr=new THREE.Group();
@@ -108,7 +178,6 @@ for(let i=0;i<14;i++){
   [-5,5].forEach(x=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.3,7.5,0.3),M(0x444444));p.position.set(x,3.75,0);gr.add(p);});
   gr.position.z=-i*12;scene.add(gr);deco.push(gr);
 }
-// Быки
 function makeBull(color){
   const b=new THREE.Group();
   const body=new THREE.Mesh(new THREE.BoxGeometry(1.2,1,1.8),M(color));body.position.y=1.2;b.add(body);
@@ -121,7 +190,6 @@ function makeBull(color){
   return b;
 }
 const player=makeBull(0x6b3a22);scene.add(player);
-// Шеф
 const chef=new THREE.Group();
 const cb=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.4,3,12),M(0xf4efe9));cb.position.y=1.5;chef.add(cb);
 const ch=new THREE.Mesh(new THREE.SphereGeometry(0.9,16,12),M(0xe8b896));ch.position.y=3.6;chef.add(ch);
@@ -134,7 +202,6 @@ let throwT=0;const THROW=0.35;
 function chefThrow(){throwT=THROW;}
 chef.position.set(0,0,-45);chef.visible=false;scene.add(chef);
 
-// Объекты
 const MAT={
  meat:M(0xb8322a),fat:M(0xf2e6d8),bread:M(0xd8a050),
  bun:M(0x7cff2a,{emissive:0x1f5a00}),patty:M(0x2a5a10),leaf:M(0xc8ff40,{emissive:0x305000}),
@@ -186,7 +253,6 @@ function burst(pos,good){
 const tmpV=new THREE.Vector3();
 function hurtFx(){const v=$('vig');v.classList.remove('on');void v.offsetWidth;v.classList.add('on');}
 
-// Состояние
 let state='start',score,lives,timeLeft,roundTime,round,speed,lane,px,jumpT,slideT,spawnT,boss,shake=0,dist=0,dieT=0;
 const JUMP=0.7,SLIDE=0.6;
 function reset(){
@@ -243,7 +309,9 @@ function showEnd(){
  $('rank').textContent=rank;
  const code='BULL-'+Math.random().toString(36).substring(2,8).toUpperCase();
  $('promo').textContent=code;$('qr').src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='+code;
- $('warn').style.display='none';$('end').classList.remove('hidden');
+ $('warn').style.display='none';
+ if (window.Leaderboard) Leaderboard.init({ game: 'mash', score: score, containerId: 'leaderboard' });
+ $('end').classList.remove('hidden');
 }
 function update(dt){
  timeLeft-=dt;roundTime-=dt;speed+=dt*0.08;
@@ -287,7 +355,6 @@ function loop(t){
  dist+=sp*dt;
  tex.offset.y=dist/4;
  deco.forEach(d=>{d.position.z+=sp*dt;if(d.position.z>12)d.position.z-=168;});
- // Игрок
  px+=((lane-1)*LANE-px)*Math.min(1,dt*14);
  player.position.x=px;
  if(!dying&&state!=='end'){

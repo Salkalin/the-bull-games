@@ -47,7 +47,7 @@
         #toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
         .legend{display:flex;justify-content:space-between;font-size:11px;color:#8a7f74}
         .legend i{margin:0 2px}
-        .overlay{position:fixed;inset:0;background:#0d0c0bf2;display:flex;align-items:center;justify-content:center;z-index:10;padding:20px}
+        .overlay{position:fixed;inset:0;background:#0d0c0bf2;display:flex;align-items:center;justify-content:center;z-index:10;padding:20px;overflow-y:auto}
         .overlay.hide{display:none}
         .card{width:min(92vw,420px);text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
         .card h2{font-family:Unbounded;font-size:28px;margin:0;color:#f3ece4}
@@ -61,10 +61,19 @@
         .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
         #qr{width:150px;height:150px;border-radius:10px;background:#fff;padding:8px}
         .code{font-family:Unbounded;letter-spacing:2px;color:#f3ece4;background:#1a1715;padding:8px 14px;border-radius:8px;border:1px dashed #d6a630}
+        
+        /* Стили турнирной таблицы */
+        #leaderboard { margin: 10px 0; text-align: left; width: 100%; max-width: 360px; }
+        .lb-title { font-family: 'Unbounded', sans-serif; font-size: 12px; letter-spacing: .14em; color: #f2c14e; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+        .lb-list { list-style: none; padding: 0; margin: 0; }
+        .lb-list li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; padding: 9px 12px; border-radius: 10px; font-size: 14px; color: #d9cfc6; border-bottom: 1px solid #2a2522; }
+        .lb-list li.lb-me { background: #2a1a14; border: 1px solid #d6a630; color: #f4efe9; font-weight: 700; }
+        .lb-pos { font-size: 16px; text-align: center; }
+        .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-score { font-family: 'Unbounded', sans-serif; font-weight: 700; color: #f2c14e; }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
 </head>
 <body>
 <div id="app">
@@ -91,6 +100,7 @@
   <button class="btn" id="go"><i class="fa-solid fa-play" style="color:#fff"></i>Начать — 3 минуты</button>
 </div></div>
 <div class="overlay hide" id="end"><div class="card">
+  <div id="leaderboard"></div>
   <div class="sub" id="reason">Время вышло</div>
   <div class="big" id="fscore">0</div>
   <div class="rank" id="rank"></div>
@@ -103,7 +113,70 @@
   </div>
   <button class="btn" id="again"><i class="fa-solid fa-rotate-right" style="color:#fff"></i>Ещё раз</button>
 </div></div>
+
 <script>
+// --- Генератор турнирной таблицы с уникальными ID ---
+window.Leaderboard = {
+  init: function (opts) {
+    const el = document.getElementById(opts.containerId);
+    if (!el) return;
+    const NAMES = ['Мясник', 'Гриль-Мастер', 'Антон', 'Шеф', 'Гость', 'Стейк-Любитель', 'Марина', 'Огонь', 'Дмитрий', 'Котлета', 'Бургер-Кинг', 'Таня', 'Ростбиф', 'Копчёный', 'Сергей', 'Уголёк', 'Максим', 'Гурман', 'Юля'];
+    const myScore = Number(opts.score) || 0;
+    
+    let myId = localStorage.getItem('bull_player_id');
+    if (!myId) {
+      myId = Math.floor(100 + Math.random() * 900);
+      localStorage.setItem('bull_player_id', myId);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = 'bull_lb_' + opts.game + '_' + today;
+    let todayData = JSON.parse(localStorage.getItem(cacheKey));
+
+    if (!todayData) {
+      todayData = { fakes: [] };
+      const usedNames = new Set();
+      for (let i = 0; i < 8; i++) {
+        let name;
+        do { name = NAMES[Math.floor(Math.random() * NAMES.length)]; } while (usedNames.has(name));
+        usedNames.add(name);
+        const fakeId = Math.floor(100 + Math.random() * 900);
+        const factor = 0.4 + Math.random() * 1.0;
+        todayData.fakes.push({ id: fakeId, name: name, score: Math.max(100, Math.round(myScore * factor)), me: false });
+      }
+      localStorage.setItem(cacheKey, JSON.stringify(todayData));
+    }
+
+    const rows = JSON.parse(JSON.stringify(todayData.fakes)); 
+    const existingMe = rows.find(r => r.id == myId);
+    if (existingMe) {
+      if (myScore > existingMe.score) existingMe.score = myScore;
+    } else {
+      rows.push({ id: myId, name: 'Гость', score: myScore, me: true });
+    }
+
+    rows.sort((a, b) => b.score - a.score);
+    const top = rows.slice(0, 7);
+    if (!top.some(r => r.id == myId)) top.push(rows.find(r => r.id == myId));
+    
+    const medals = ['🥇', '🥈', '🥉'];
+    let html = '<div class="lb-title">🏆 ТОП СЕГОДНЯ</div><ol class="lb-list">';
+    
+    top.forEach((r, i) => {
+      const isMe = r.id == myId;
+      const pos = medals[i] || (i + 1);
+      const displayName = `${r.name} #${r.id}`;
+      html += `<li class="${isMe ? 'lb-me' : ''}">
+        <span class="lb-pos">${pos}</span>
+        <span class="lb-name">${displayName}${isMe ? ' ←' : ''}</span>
+        <span class="lb-score">${r.score}</span>
+      </li>`;
+    });
+    html += '</ol>';
+    el.innerHTML = html;
+  }
+};
+
 const N=7, board=document.getElementById('board');
 const ICONS={g:['fa-leaf','fa-seedling','fa-tree'],m:['fa-drumstick-bite','fa-burger','fa-bacon'],b:['fa-bread-slice','fa-hotdog','fa-pizza-slice'],x:['fa-bone'],c:['fa-fire']};
 const NAMES={g:['Капуста','Салат','Брокколи'],m:['Стейк','Котлета','Окорок'],b:['Хлеб','Сэндвич','Пицца']};
@@ -192,7 +265,6 @@ async function dropCoal(){
   if(over)return;while(busy)await sleep(100);
   const cols=[...Array(N).keys()].filter(c=>grid[0][c].kind!=='c');if(!cols.length){countCoal();return}
   const c=cols[Math.floor(Math.random()*cols.length)];
-  for(let r=0;r<N-1;r++){} // coal enters top, tiles below unchanged
   const t=mk('c');grid[0][c]=t;render({[t.id]:-1});
   toast('Огонь Шефа!');tone(120,.3,'sawtooth',.1);checkEnd();
 }
@@ -203,7 +275,7 @@ function startGame(){
   document.querySelector('#bar div').style.width='100%';
   initGrid();render();
   document.getElementById('start').classList.add('hide');document.getElementById('end').classList.add('hide');
-  clearInterval(timer);timer=setInterval(()=>{timeLeft--;document.getElementById('time').textContent=fmt(timeLeft);document.querySelector('#bar div').style.width=(timeLeft/180*100)+'%';
+  clearInterval(timer);timer=setInterval(()=>{timeLeft--;document.getElementById('time').textContent=fmt(timeLeft);document.querySelector('#bar div').style.width=(timeLeft/10*100)+'%';
     if(timeLeft>0&&timeLeft%30===0)dropCoal();if(timeLeft<=0)endGame('Время вышло')},1000);
 }
 function checkEnd(){if(!over&&countCoal()>10)endGame('Гриль переполнен угольками')}
@@ -218,6 +290,7 @@ function endGame(reason){
   document.getElementById('tg').href='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(msg);
   document.getElementById('wa').href='https://wa.me/?text='+encodeURIComponent(msg+' '+url);
   tone(220,.5,'sawtooth',.1);
+  if (window.Leaderboard) Leaderboard.init({ game: 'match', score: score, containerId: 'leaderboard' });
   setTimeout(()=>document.getElementById('end').classList.remove('hide'),500);
 }
 document.getElementById('go').onclick=startGame;

@@ -1,0 +1,12 @@
+#leaderboard { margin: 18px 0; text-align: left; width: 100%; max-width: 360px; }
+.lb-title { font-family: Unbounded, sans-serif; font-size: 12px; letter-spacing: .14em;
+            color: #f2c14e; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+.lb-list { list-style: none; padding: 0; margin: 0; }
+.lb-list li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center;
+              padding: 9px 12px; border-radius: 10px; font-size: 14px; color: #d9cfc6;
+              border-bottom: 1px solid #2a2522; }
+.lb-list li.lb-me { background: #2a1a14; border: 1px solid #d6a630; color: #f4efe9; font-weight: 700; }
+.lb-pos { font-size: 16px; text-align: center; }
+.lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { font-family: Unbounded, sans-serif; font-weight: 700; color: #f2c14e; }
+.lb-empty { text-align: center; color: #8a817a; font-size: 13px; padding: 14px; }
